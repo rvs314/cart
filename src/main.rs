@@ -2,6 +2,7 @@ mod parser;
 mod tree;
 mod bytes;
 mod srcloc;
+mod input_source;
 
 fn main() {
     println!("Hello, world!");

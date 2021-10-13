@@ -1,71 +1,69 @@
-use std::io::{self, Bytes, Read};
-use std::iter::Peekable;
+use std::io::{self, BufRead};
 
-use crate::bytes::ByteString;
-use crate::srcloc::{ParseLoc, SrcLoc};
-use crate::tree::MarkedTree;
+use crate::{input_source::InputSrc, srcloc::SrcLoc, tree::MarkedTree};
 
-pub type ParseTree<'a, R> = MarkedTree<SrcLoc<'a, R>, ByteString>;
-type ParseRes<'a, R, V> = Result<V, ParserError<'a, R>>;
-
-pub enum ParserError<'a, R: Read> {
-    IOError(io::Error),
-    ParsingError {
-        location: SrcLoc<'a, R>,
-        message: String,
-    },
+pub struct Parser<R: BufRead> {
+    src: InputSrc<R>,
 }
 
-pub struct Parser<'a, R: Read> {
-    name: &'a str,
-    input: Peekable<Bytes<R>>,
-    here: ParseLoc,
-    lines: Vec<ByteString>,
+#[derive(Clone)]
+pub struct ParseError<'a, R: BufRead> {
+    at: SrcLoc<'a, R>,
+    msg: String,
 }
 
-impl<'a, R: Read> Parser<'a, R> {
-    pub fn new(name: &'a str, input: Bytes<R>) -> Parser<'a, R> {
-        Parser {
-            name,
-            input: input.peekable(),
-            lines: Vec::new(),
-            here: ParseLoc::start(),
+type ParseTree<'a, R> = MarkedTree<SrcLoc<'a, R>, String>;
+type ParseRes<'a, R, T> = Result<T, ParseError<'a, R>>;
+
+impl<R: BufRead> Parser<R> {
+    fn error<'a>(&'a self, msg: String) -> ParseError<'a, R> {
+        ParseError {
+            at: self.src.here(),
+            msg,
         }
     }
 
-    /// Returns a src loc pointing to the
-    /// current location in the current input source
-    pub fn here(&'a self) -> SrcLoc<'a, R> {
-        SrcLoc::new(self.here, self)
+    fn input_error<'a>(&'a self, e: io::Error) -> ParseError<'a, R> {
+        self.error(format!("Input Error: {}", e.to_string()))
     }
 
-    /// Peeks a character from the input stream
-    fn peek(&'a mut self) -> ParseRes<'a, R, Option<u8>> {
-        match self.input.peek() {
-            Some(Ok(c)) => Ok(Some(*c)),
-            Some(Err(c)) => Err(ParserError::IOError(c)),
-            None => Ok(None),
-        }
+    fn peek<'a>(&'a mut self) -> Option<ParseRes<'a, R, u8>> {
+        Some(
+            self.src
+                .peek()?
+                .map_err(move |x: io::Error| self.input_error(x)),
+        )
     }
 
-    fn pop(&'a mut self) -> ParseRes<'a, R, Option<u8>> {
-        match self.input.next() {
-            Some(Ok(c)) => Ok(Some(c)),
-            Some(Err(c)) => Err(ParserError::IOError(c)),
-            None => Ok(None),
-        }
+    fn pop<'a>(&'a mut self) -> Option<ParseRes<'a, R, u8>> {
+        Some(
+            self.src
+                .pop()?
+                .map_err(move |x: io::Error| self.input_error(x)),
+        )
     }
 
-    /// Read an S-expression
-    pub fn read() -> ParseRes<'a, R, ParseTree<'a, R>> {
-        todo!()
+    fn eat<'a>(&'a mut self, c: u8) -> ParseRes<'a, R, ()> {
+        let k = self.pop().map(|v| v.map(|z| (z == c, z)));
+        Err(match k {
+            Some(Ok((true, _))) => return Ok(()),
+            Some(Ok((false, v))) => self.error(format!(
+                "Expected to see a {}, but instead saw a {}",
+                c as char, v as char
+            )),
+            Some(Err(e)) => e,
+            None => self.error(format!(
+                "Expected to see a {}, but hit the end of file",
+                c as char
+            )),
+        })
     }
-}
 
-impl<'a, R: 'a + Read> Iterator for Parser<'a, R> {
-    type Item = ParseRes<'a, R, ParseTree<'a, R>>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    pub fn read<'a>(&'a mut self) -> ParseRes<'a, R, ParseTree<'a, R>> {
+        let c = self.src.peek().ok_or(ParseError {
+            at: self.src.here(),
+            msg: format!("Expected to see something here, but didn't"),
+        })?.map_err(|e| self.input_error(e));
         todo!()
     }
 }
