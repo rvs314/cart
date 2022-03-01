@@ -1,1 +1,1 @@
-In-progress high-level wrapper for libgccjit.
+Low-level programming library for guile using libgccjit.
