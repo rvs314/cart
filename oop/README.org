@@ -1,0 +1,7 @@
+This directory contains code for an OOP wrapper over the lower-level bindings in the =libgccjit= directory. The main goal is to make the API better by:
+- Abstracting out compilation contexts using the garbage collector and dynamic variables
+- Use lists instead of C arrays to minimize overhead
+- Make functions generic where feasible
+- Make intermediate objects into GOOPS objects
+- Use keyword arguments to not force null locations to be passed everywhere
+- Generally make things more scheme-ish

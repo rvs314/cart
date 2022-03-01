@@ -1,0 +1,15 @@
+This directory contains the code for generating libgccjit bindings. There's two things we need from the bindings: the function bindings and the enum values.
+
+The former is done by scraping the libgccjit documentation. This uses the =parse.rb= ruby script to process the files in the =gccjit-docs= directories, which can be done with the following code:
+
+#+begin_example sh
+ruby ./parse.rb ./gccjit-docs/* > bindings.scm
+#+end_example
+
+The latter is done by compiling and running the =enums.c= file, which includes a list of enums which are to be queried. To run this, do the following:
+
+#+begin_example sh
+gcc enums.c -lgccjit; ./a.out > enums.c
+#+end_example
+
+There's also an =examples= directory, which contains the first three examples from the libgccjit repository ported to scheme. These are mainly for documentation and testing purposes.
