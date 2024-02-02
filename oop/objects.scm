@@ -28,7 +28,7 @@
 
 
 (define-syntax-rule (->object! obj)
-  (begin (set! obj (->object))))
+  (begin (set! obj (->object obj))))
         
 (define-method (show (obj <cart-object>))
   (define p (->pointer (->object obj)))
